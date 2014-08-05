@@ -9,8 +9,6 @@ Manager::Manager(watch::WatchConnector *watch, DBusConnector *dbus, VoiceCallMan
     QObject(0), watch(watch), dbus(dbus), voice(voice), notifications(notifications), commands(new WatchCommands(watch, this)),
     settings(settings), notification(MNotification::DeviceEvent)
 {
-    notifications->setSettings(settings);;
-
     connect(settings, SIGNAL(valueChanged(QString)), SLOT(onSettingChanged(const QString&)));
     connect(settings, SIGNAL(valuesChanged()), SLOT(onSettingsChanged()));
     //connect(settings, SIGNAL(silentWhenConnectedChanged(bool)), SLOT(onSilentWhenConnectedChanged(bool)));
@@ -122,9 +120,15 @@ void Manager::onActiveVoiceCallChanged()
 {
     logger()->debug() << "Manager::onActiveVoiceCallChanged()";
 
+    if (!settings->property("incomingCallNotification").toBool()) {
+        logger()->debug() << "Ignoring ActiveVoiceCallChanged because of setting!";
+        return;
+    }
+
     VoiceCallHandler* handler = voice->activeVoiceCall();
     if (handler) {
         connect(handler, SIGNAL(statusChanged()), SLOT(onActiveVoiceCallStatusChanged()));
+        connect(handler, SIGNAL(destroyed()), SLOT(onActiveVoiceCallStatusChanged()));
         return;
     }
 }
@@ -133,7 +137,8 @@ void Manager::onActiveVoiceCallStatusChanged()
 {
     VoiceCallHandler* handler = voice->activeVoiceCall();
     if (!handler) {
-        logger()->debug() << "ActiveVoiceCallStatusChanged but no activeVoiceCall??";
+        logger()->debug() << "ActiveVoiceCall destroyed";
+        watch->endPhoneCall();
         return;
     }
 
@@ -188,13 +193,13 @@ QString Manager::findPersonByNumber(QString number)
 
 void Manager::onVoiceError(const QString &message)
 {
-    logger()->error() << "Error: " << message;
+    logger()->error() << "Error:" << message;
 }
 
 
 void Manager::onNotifyError(const QString &message)
 {
-    qWarning() << "Error: " << message;
+    qWarning() << "Error:" << message;
 }
 
 void Manager::onSmsNotify(const QString &sender, const QString &data)
@@ -228,7 +233,7 @@ void Manager::hangupAll()
 
 void Manager::onMprisPropertiesChanged(QString interface, QMap<QString,QVariant> changed, QStringList invalidated)
 {
-    qDebug() << interface << changed << invalidated;
+    logger()->debug() << interface << changed << invalidated;
 
     if (changed.contains("Metadata")) {
         setMprisMetadata(changed.value("Metadata").value<QDBusArgument>());
@@ -242,6 +247,7 @@ void Manager::onMprisPropertiesChanged(QString interface, QMap<QString,QVariant>
     }
 
     lastSeenMpris = message().service();
+    logger()->debug() << "lastSeenMpris:" << lastSeenMpris;
 }
 
 QString Manager::mpris()
@@ -250,7 +256,7 @@ QString Manager::mpris()
     if (not lastSeenMpris.isEmpty() && services.contains(lastSeenMpris))
         return lastSeenMpris;
 
-    foreach (QString service,services)
+    foreach (QString service, services)
         if (service.startsWith("org.mpris.MediaPlayer2."))
             return service;
 

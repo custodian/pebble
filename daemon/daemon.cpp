@@ -34,13 +34,8 @@
 #include <QFile>
 #include <QDir>
 #include <QFileInfo>
-
-#include "LogManager"
-#include "SystemlogAppender"
-#include "FileAppender"
-#include "helpers/factory.h"
-#include "Appender"
-#include "PropertyConfigurator"
+#include <Log4Qt/LogManager>
+#include <Log4Qt/PropertyConfigurator>
 
 void signalhandler(int sig)
 {
@@ -69,7 +64,7 @@ void initLogging()
     // console.log() exactly in Sailfish OS device release builds doesn't go through the same qDebug() channel
     Log4Qt::LogManager::setHandleQtMessages(true);
 
-    qDebug() << "Using following log config file: " << usedConfigFile;
+    qDebug() << "Using following log config file:" << usedConfigFile;
 }
 
 int main(int argc, char *argv[])
@@ -82,12 +77,11 @@ int main(int argc, char *argv[])
 
     Log4Qt::Logger::logger(QLatin1String("Main Logger"))->info() << argv[0] << APP_VERSION;
 
+    Settings settings;
     watch::WatchConnector watch;
     DBusConnector dbus;
-    VoiceCallManager voice;
-    NotificationManager notifications;
-    Settings settings;
-
+    VoiceCallManager voice(&settings);
+    NotificationManager notifications(&settings);
     Manager manager(&watch, &dbus, &voice, &notifications, &settings);
 
     signal(SIGINT, signalhandler);

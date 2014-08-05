@@ -61,7 +61,34 @@ Page {
                     margins: Theme.paddingMedium
                 }
                 icon.source: "../images/btn_donate.png"
+                height: icon.height - Theme.paddingLarge
                 onClicked: Qt.openUrlExternally("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MAGN86VCARBSA")
+            }
+
+            Label {
+                text: qsTr("Bugs?")
+                font.family: Theme.fontFamilyHeading
+                color: Theme.highlightColor
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.paddingMedium
+            }
+            Button {
+                text: "Open Bug Tracker"
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    margins: Theme.paddingLarge
+                }
+                onClicked: Qt.openUrlExternally("https://github.com/smokku/pebble/issues")
+            }
+            Button {
+                text: "Send application log to developer"
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    margins: Theme.paddingLarge
+                }
+                onClicked: Qt.openUrlExternally("mailto:bugs@xiaoka.com?subject=pebbled issue&body=please describe your issue&attachment=/home/nemo/.cache/pebbled/pebble.log")
             }
         }
     }

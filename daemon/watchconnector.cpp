@@ -22,10 +22,10 @@ void WatchConnector::deviceDiscovered(const QBluetoothDeviceInfo &device)
 {
     //FIXME TODO: Configurable
     if (device.name().startsWith("Pebble")) {
-        logger()->debug() << "Found Pebble: " << device.name() << " (" << device.address().toString() << ')';
+        logger()->debug() << "Found Pebble:" << device.name() << '(' << device.address().toString() << ')';
         handleWatch(device.name(), device.address().toString());
     } else {
-        logger()->debug() << "Found other device: " << device.name() << " (" << device.address().toString() << ')';
+        logger()->debug() << "Found other device:" << device.name() << '(' << device.address().toString() << ')';
     }
 }
 
@@ -36,7 +36,7 @@ void WatchConnector::deviceConnect(const QString &name, const QString &address)
 
 void WatchConnector::reconnect()
 {
-    logger()->debug() << "reconnect " << _last_name;
+    logger()->debug() << "reconnect" << _last_name;
     if (!_last_name.isEmpty() && !_last_address.isEmpty()) {
         deviceConnect(_last_name, _last_address);
     }
@@ -53,7 +53,7 @@ void WatchConnector::disconnect()
 
 void WatchConnector::handleWatch(const QString &name, const QString &address)
 {
-    logger()->debug() << "handleWatch " << name << " " << address;
+    logger()->debug() << "handleWatch" << name << address;
     reconnectTimer.stop();
     if (socket != nullptr && socket->isOpen()) {
         socket->close();
@@ -95,7 +95,7 @@ void WatchConnector::decodeMsg(QByteArray data)
     endpoint = (data.at(index) << 8) + data.at(index+1);
     index += 2;
 
-    logger()->debug() << "Length:" << datalen << " Endpoint:" << decodeEndpoint(endpoint);
+    logger()->debug() << "Length:" << datalen << "Endpoint:" << decodeEndpoint(endpoint);
     logger()->debug() << "Data:" << data.mid(index).toHex();
 
     emit messageDecoded(endpoint, data.mid(index, datalen));
@@ -141,11 +141,16 @@ void WatchConnector::onDisconnected()
 
     reconnectTimer.setInterval(reconnectTimer.interval() + __reconnect_timeout);
     reconnectTimer.start();
-    logger()->debug() << "Will reconnect in " << reconnectTimer.interval() << " ms";
+    logger()->debug() << "Will reconnect in" << reconnectTimer.interval() << "ms";
 }
 
-void WatchConnector::onError(QBluetoothSocket::SocketError error) {
-    logger()->error() << "Error connecting Pebble: " << error << socket->errorString();
+void WatchConnector::onError(QBluetoothSocket::SocketError error)
+{
+    if (error == QBluetoothSocket::UnknownSocketError) {
+        logger()->info() << error << socket->errorString();
+    } else {
+        logger()->error() << "Error connecting Pebble:" << error << socket->errorString();
+    }
 }
 
 void WatchConnector::sendData(const QByteArray &data)
@@ -241,6 +246,23 @@ void WatchConnector::ping(uint val)
     res.append((char)(val & 0xff));
 
     sendMessage(watchPING, res);
+}
+
+void WatchConnector::time()
+{
+    QByteArray res;
+    QDateTime UTC(QDateTime::currentDateTimeUtc());
+    QDateTime local(UTC.toLocalTime());
+    local.setTimeSpec(Qt::UTC);
+    int offset = UTC.secsTo(local);
+    uint val = (local.toMSecsSinceEpoch() + offset) / 1000;
+
+    res.append(0x02); //SET_TIME_REQ
+    res.append((char)((val >> 24) & 0xff));
+    res.append((char)((val >> 16) & 0xff));
+    res.append((char)((val >> 8) & 0xff));
+    res.append((char)(val & 0xff));
+    sendMessage(watchTIME, res);
 }
 
 QString WatchConnector::timeStamp()

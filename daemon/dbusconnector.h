@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QVariantMap>
-#include "Logger"
+#include <Log4Qt/Logger>
 
 class DBusConnector : public QObject
 {
@@ -31,8 +31,8 @@ public slots:
     bool findPebble();
 
 protected slots:
-    void onServiceRegistered(QString&);
-    void onServiceUnregistered(QString&);
+    void onServiceRegistered(const QString &);
+    void onServiceUnregistered(const QString &);
 
 };
 

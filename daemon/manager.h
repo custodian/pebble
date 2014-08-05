@@ -14,7 +14,7 @@
 #include <QtContacts/QContactManager>
 #include <QtContacts/QContactDetailFilter>
 #include <MNotification>
-#include "Logger"
+#include <Log4Qt/Logger>
 
 using namespace QtContacts;
 
@@ -102,6 +102,7 @@ public:
 
 public slots:
     void ping(int val) { static_cast<Manager*>(parent())->watch->ping((unsigned int)val); }
+    void time() { static_cast<Manager*>(parent())->watch->time(); }
     void disconnect() { static_cast<Manager*>(parent())->watch->disconnect(); }
     void reconnect() { static_cast<Manager*>(parent())->watch->reconnect(); }
 

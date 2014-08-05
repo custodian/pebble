@@ -13,7 +13,7 @@ Name:       pebble
 %{!?qtc_make:%define qtc_make make}
 %{?qtc_builddir:%define _builddir %qtc_builddir}
 Summary:    Support for Pebble watch in SailfishOS
-Version:    0.7
+Version:    0.9
 Release:    1
 Group:      Qt/Qt
 License:    BSD
@@ -83,6 +83,5 @@ systemctl --user daemon-reload
 %{_libdir}/systemd/user/%{name}d.service
 %{_libdir}/systemd/user/user-session.target.wants/%{name}d.service
 %{_datadir}/%{name}/log4qt.conf
-%{_datadir}/%{name}/lib
 # >> files
 # << files
