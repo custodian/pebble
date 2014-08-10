@@ -173,6 +173,15 @@ void NotificationManager::Notify(const QString &app_name, uint replaces_id, cons
                              hints.value("x-nemo-preview-summary", summary).toString()
                             );
 
+    } else if (app_name == "harbour-communi") {
+        if (!settings->property("notificationsIRC").toBool()) {
+            logger()->debug() << "Ignoring irc notification because of setting!";
+            return;
+        }
+        emit this->smsNotify(hints.value("x-nemo-preview-summary", summary).toString(),
+                             hints.value("x-nemo-preview-body",body).toString()
+                             );
+
     } else {
         //Prioritize x-nemo-preview* over dbus direct summary and body
         QString subject = hints.value("x-nemo-preview-summary", "").toString();

@@ -48,6 +48,7 @@ Page {
         property bool notificationsMitakuuluu: true
         property bool notificationsTwitter: true
         property bool notificationsFacebook: true
+        property bool notificationsIRC: true
         property bool notificationsOther: true
         property bool notificationsAll: false
     }
@@ -218,6 +219,15 @@ Page {
                 automaticCheck: false
                 onClicked: {
                     settings.notificationsFacebook = !settings.notificationsFacebook;
+                }
+            }
+
+            TextSwitch {
+                text: qsTr("IRC for Sailfish")
+                checked: settings.notificationsIRC
+                automaticCheck: false
+                onClicked: {
+                    settings.notificationsIRC = !settings.notificationsIRC;
                 }
             }
 
