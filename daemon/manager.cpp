@@ -35,15 +35,6 @@ Manager::Manager(watch::WatchConnector *watch, DBusConnector *dbus, VoiceCallMan
     connect(watch, SIGNAL(messageDecoded(uint,QByteArray)), commands, SLOT(processMessage(uint,QByteArray)));
     connect(commands, SIGNAL(hangup()), SLOT(hangupAll()));
 
-    // Set BT icon for notification
-    notification.setImage("icon-system-bluetooth-device");
-
-    if (btDevice.isValid()) {
-        logger()->debug() << "BT local name:" << btDevice.name();
-        connect(dbus, SIGNAL(pebbleChanged()), SLOT(onPebbleChanged()));
-        dbus->findPebble();
-    }
-
     PebbledProxy *proxy = new PebbledProxy(this);
     PebbledAdaptor *adaptor = new PebbledAdaptor(proxy);
     QDBusConnection session = QDBusConnection::sessionBus();
@@ -62,6 +53,16 @@ Manager::Manager(watch::WatchConnector *watch, DBusConnector *dbus, VoiceCallMan
                 this, SLOT(onMprisPropertiesChanged(QString,QMap<QString,QVariant>,QStringList)));
 
     connect(this, SIGNAL(mprisMetadataChanged(QVariantMap)), commands, SLOT(onMprisMetadataChanged(QVariantMap)));
+
+    // Set BT icon for notification
+    notification.setImage("icon-system-bluetooth-device");
+
+    if (btDevice.isValid()) {
+        logger()->debug() << "BT local name:" << btDevice.name();
+        connect(dbus, SIGNAL(pebbleChanged()), SLOT(onPebbleChanged()));
+        dbus->findPebble();
+    }
+
 }
 
 void Manager::onSettingChanged(const QString &key)
@@ -120,7 +121,8 @@ void Manager::onActiveVoiceCallChanged()
 {
     logger()->debug() << "Manager::onActiveVoiceCallChanged()";
 
-    if (!settings->property("incomingCallNotification").toBool()) {
+    QVariant incomingCallNotification = settings->property("incomingCallNotification");
+    if (incomingCallNotification.isValid() && !incomingCallNotification.toBool()) {
         logger()->debug() << "Ignoring ActiveVoiceCallChanged because of setting!";
         return;
     }
@@ -181,14 +183,18 @@ void Manager::onActiveVoiceCallStatusChanged()
 
 QString Manager::findPersonByNumber(QString number)
 {
+    QString person;
     numberFilter.setValue(number);
 
     const QList<QContact> &found = contacts->contacts(numberFilter);
     if (found.size() == 1) {
-        return found[0].detail(QContactDetail::TypeDisplayLabel).value(0).toString();
+        person = found[0].detail(QContactDetail::TypeDisplayLabel).value(0).toString();
     }
 
-    return QString();
+    if (settings->property("transliterateMessage").toBool()) {
+        transliterateMessage(person);
+    }
+    return person;
 }
 
 void Manager::onVoiceError(const QString &message)
@@ -204,23 +210,40 @@ void Manager::onNotifyError(const QString &message)
 
 void Manager::onSmsNotify(const QString &sender, const QString &data)
 {
+    if (settings->property("transliterateMessage").toBool()) {
+        transliterateMessage(sender);
+        transliterateMessage(data);
+    }
     watch->sendSMSNotification(sender, data);
 }
 
 void Manager::onTwitterNotify(const QString &sender, const QString &data)
 {
+    if (settings->property("transliterateMessage").toBool()) {
+        transliterateMessage(sender);
+        transliterateMessage(data);
+    }
     watch->sendTwitterNotification(sender, data);
 }
 
 
 void Manager::onFacebookNotify(const QString &sender, const QString &data)
 {
+    if (settings->property("transliterateMessage").toBool()) {
+        transliterateMessage(sender);
+        transliterateMessage(data);
+    }
     watch->sendFacebookNotification(sender, data);
 }
 
 
 void Manager::onEmailNotify(const QString &sender, const QString &data,const QString &subject)
 {
+    if (settings->property("transliterateMessage").toBool()) {
+        transliterateMessage(sender);
+        transliterateMessage(data);
+        transliterateMessage(subject);
+    }
     watch->sendEmailNotification(sender, data, subject);
 }
 
@@ -321,5 +344,28 @@ void Manager::applyProfile()
         else {
             logger()->error() << res.error().message();
         }
+    }
+}
+
+void Manager::transliterateMessage(const QString &text)
+{
+    if (transliterator.isNull()) {
+        UErrorCode status = U_ZERO_ERROR;
+        transliterator.reset(icu::Transliterator::createInstance(icu::UnicodeString::fromUTF8("Any-Latin; Latin-ASCII"),UTRANS_FORWARD, status));
+        if (U_FAILURE(status)) {
+            logger()->warn() << "Error creaing ICU Transliterator \"Any-Latin; Latin-ASCII\":" << u_errorName(status);
+        }
+    }
+    if (!transliterator.isNull()) {
+        logger()->debug() << "String before transliteration:" << text;
+
+        icu::UnicodeString uword = icu::UnicodeString::fromUTF8(text.toStdString());
+        transliterator->transliterate(uword);
+
+        std::string translited;
+        uword.toUTF8String(translited);
+
+        const_cast<QString&>(text) = QString::fromStdString(translited);
+        logger()->debug() << "String after transliteration:" << text;
     }
 }
