@@ -70,6 +70,7 @@ void initLogging()
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
+    app.setApplicationName("pebble"); // Use the same appname as the UI.
 
     // Init logging should be called after app object creation as initLogging() will examine
     // QCoreApplication for determining the .conf files locations
@@ -78,16 +79,11 @@ int main(int argc, char *argv[])
     Log4Qt::Logger::logger(QLatin1String("Main Logger"))->info() << argv[0] << APP_VERSION;
 
     Settings settings;
-    watch::WatchConnector watch;
-    DBusConnector dbus;
-    VoiceCallManager voice(&settings);
-    NotificationManager notifications(&settings);
-    Manager manager(&watch, &dbus, &voice, &notifications, &settings);
+    Manager manager(&settings);
+    Q_UNUSED(manager);
 
     signal(SIGINT, signalhandler);
     signal(SIGTERM, signalhandler);
-    QObject::connect(&app, SIGNAL(aboutToQuit()), &watch, SLOT(endPhoneCall()));
-    QObject::connect(&app, SIGNAL(aboutToQuit()), &watch, SLOT(disconnect()));
 
     return app.exec();
 }
