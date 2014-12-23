@@ -1,6 +1,7 @@
 [Unit]
-Description=Pebble Connector Service
-After=pre-user-session.target
+Description=Pebble connector daemon
+Requires=dbus.socket bluetooth.target
+After=pre-user-session.target lipstick.service dbus.socket bluetooth.target
 
 [Service]
 ExecStart=/usr/bin/pebbled
